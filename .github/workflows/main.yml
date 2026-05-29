@@ -13,22 +13,31 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-      - name: Add EC2 host to known_hosts
-        run: |
-          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
-
-      - name: SSH into EC2 and build/run Docker
-        run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ec2-user@${{ secrets.EC2_HOST }} << 'EOF'
+      - name: Deploy to EC2 using SSH Action
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
             set -e
-            cd /home/ec2-user/app || mkdir -p /home/ec2-user/app && cd /home/ec2-user/app
+
+            mkdir -p /home/ec2-user/app
+            cd /home/ec2-user/app
+
+            # Clone repo if not exists
+            if [ ! -d ".git" ]; then
+              git clone https://github.com/<YOUR_USERNAME>/<YOUR_REPO>.git .
+            fi
+
+            # Pull latest code
+            git pull origin main
+
+            # Build Docker image
             docker build -t my-app .
+
+            # Stop and remove old container
             docker rm -f my-app || true
+
+            # Run new container
             docker run -d --name my-app -p 80:80 my-app
-          EOF
