@@ -3,7 +3,7 @@ name: CI/CD Pipeline
 on:
   push:
     branches:
-      - main
+      - main1
 
 jobs:
   deploy:
@@ -20,15 +20,8 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            set -e
-
-            mkdir -p /home/ec2-user/app
-            cd /home/ec2-user/app
-
-            # Clone repo if not exists
-            if [ ! -d ".git" ]; then
-              git clone https://github.com/<YOUR_USERNAME>/<YOUR_REPO>.git .
-            fi
+            
+            cd /home/ec2-user/git/dummy-web
 
             # Pull latest code
             git pull origin main
@@ -40,4 +33,4 @@ jobs:
             docker rm -f my-app || true
 
             # Run new container
-            docker run -d --name my-app -p 80:80 my-app
+            docker run -d --name my-app -p 8081:8081 my-app
